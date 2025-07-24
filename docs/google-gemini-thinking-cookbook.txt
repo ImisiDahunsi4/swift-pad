@@ -1,0 +1,477 @@
+[Gemini 2.5 Flash](https://ai.google.dev/gemini-api/docs/models#gemini-2.5-flash-preview-04-17) and [Gemini 2.5 Pro](https://ai.google.dev/gemini-api/docs/models#gemini-2.5-pro-preview-06-05) are models that are trained to do a [thinking process](https://ai.google.dev/gemini-api/docs/thinking-mode) (or reasoning) before getting to a final answer. As a result,
+those models are capable of stronger reasoning capabilities in its responses than previous models.
+
+You'll see examples of those reasoning capabilities with [code understanding](#scrollTo=GAa7sCD7tuMW), [geometry](#scrollTo=ADiJV-fFyjRe) and [math](#scrollTo=EXPPWpt6ttJZ) problems.
+
+As you will see, the model is exposing its thoughts so you can have a look at its reasoning and how it did reach its conclusions.
+
+## Understanding the thinking models
+
+[Gemini 2.5 models](https://ai.google.dev/gemini-api/docs/thinking) are optimized for complex tasks that need multiple rounds of strategyzing and iteratively solving.
+
+[Gemini 2.5 Flash](https://ai.google.dev/gemini-api/docs/models#gemini-2.5-flash-preview-04-17) in particular, brings the flexibility of using `thinking_budget` - a parameter
+that offers fine-grained control over the maximum number of tokens a model can generate while thinking. Alternatively, you can designate a precise token allowance for the
+"thinking" stage through the adjusment of the `thinking_budget` parameter. This allowance can vary between 0 and 24576 tokens for 2.5 Flash.
+
+For more information about all Gemini models, check the [documentation](https://ai.google.dev/gemini-api/docs/models/gemini) for extended information on each of them.
+
+On this notebook all examples are using `Gemini 2.5 Pro` and `Gemini 2.5 Flash` with the new `thinking_budget` parameter. For more information about using the `thinking_budget` with the Gemini thinking model, check the [documentation](https://ai.google.dev/gemini-api/docs/thinking).
+
+## Setup
+
+This section install the SDK, set it up using your [API key](../quickstarts/Authentication.ipynb), imports the relevant libs, downloads the sample videos and upload them to Gemini.
+
+Just collapse (click on the little arrow on the left of the title) and run this section if you want to jump straight to the examples (just don't forget to run it otherwise nothing will work).
+
+### Install SDK
+
+The new **[Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/sdks)** provides programmatic access to Gemini models using both the [Google AI for Developers](https://ai.google.dev/gemini-api/docs) and [Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/overview) APIs. With a few exceptions, code that runs on one platform will run on both. This means that you can prototype an application using the Developer API and then migrate the application to Vertex AI without rewriting your code.
+
+More details about this new SDK on the [documentation](https://ai.google.dev/gemini-api/docs/sdks) or in the [Getting started](../quickstarts/Get_started.ipynb) notebook.
+
+%pip install -U -q "google-genai>=1.16.0"
+
+### Setup your API key
+
+To run the following cell, your API key must be stored it in a Colab Secret named `GOOGLE_API_KEY`. If you don't already have an API key, or you're not sure how to create a Colab Secret, see [Authentication](../quickstarts/Authentication.ipynb) for an example.
+
+from google.colab import userdata
+
+GOOGLE_API_KEY=userdata.get('GOOGLE_API_KEY')
+
+### Initialize SDK client
+
+With the new SDK you now only need to initialize a client with you API key (or OAuth if using [Vertex AI](https://cloud.google.com/vertex-ai)). The model is now set in each call.
+
+from google import genai
+from google.genai import types
+
+client = genai.Client(api_key=GOOGLE_API_KEY)
+
+MODEL_ID="gemini-2.5-flash-preview-05-20" # @param ["gemini-2.5-flash-preview-05-20", "gemini-2.5-pro-preview-06-05"] {"allow-input":true, isTemplate: true}
+
+### Imports
+
+import json
+from PIL import Image
+from IPython.display import display, Markdown
+
+## Using the thinking models
+
+Here are some quite complex examples of what Gemini thinking models can solve.
+
+In each of them you can select different models to see how this new model compares to its predecesors.
+
+In some cases, you'll still get the good answer from the other models, in that case, re-run it a couple of times and you'll see that Gemini thinking models are more consistent thanks to their thinking step.
+
+### Using adaptive thinking
+
+You can start by asking the model to explain a concept and see how it does reasoning before answering.
+
+Starting with the adaptive `thinking_budget` - which is the default when you don't specify a budget - the model will dynamically adjust the budget based on the complexity of the request.
+
+The animal it should find is a [**Platipus**](https://en.wikipedia.org/wiki/Platypus), but as you'll see it is not the first answer it thinks of depending on how much thinking it does.
+
+prompt = """
+    You are playing the 20 question game. You know that what you are looking for
+    is a aquatic mammal that doesn't live in the sea, is venomous and that's
+    smaller than a cat. What could that be and how could you make sure?
+"""
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=prompt
+)
+
+Markdown(response.text)
+
+Looking to the response metadata, you can see not only the amount of tokens on your input and the amount of tokens used for the response, but also the amount of tokens used for the thinking step - As you can see here, the model used around 1400 tokens in the thinking steps:
+
+print("Prompt tokens:",response.usage_metadata.prompt_token_count)
+print("Thoughts tokens:",response.usage_metadata.thoughts_token_count)
+print("Output tokens:",response.usage_metadata.candidates_token_count)
+print("Total tokens:",response.usage_metadata.total_token_count)
+
+### Disabling the thinking steps
+
+You can also disable the thinking steps by setting the `thinking_budget` to 0. You'll see that in this case, the model doesn't think of the platipus as a possible answer.
+
+**NOTE:** For now, you can disable the thinking steps when using the `gemini-2.5-flash-preview-05-20` model.
+
+prompt = """
+    You are playing the 20 question game. You know that what you are looking for
+    is a aquatic mammal that doesn't live in the sea, is venomous and that's
+    smaller than a cat. What could that be and how could you make sure?
+"""
+
+response = client.models.generate_content(
+  model=MODEL_ID,
+  contents=prompt,
+  config=types.GenerateContentConfig(
+    thinking_config=types.ThinkingConfig(
+      thinking_budget=0
+    )
+  )
+)
+
+Markdown(response.text)
+
+Now you can see that the response is faster as the model didn't perform any thinking step. Also you can see that no tokens were used for the thinking step:
+
+print("Prompt tokens:",response.usage_metadata.prompt_token_count)
+print("Thoughts tokens:",response.usage_metadata.thoughts_token_count)
+print("Output tokens:",response.usage_metadata.candidates_token_count)
+print("Total tokens:",response.usage_metadata.total_token_count)
+
+### Solving a physics problem
+
+Now, try with a simple physics comprehension example. First you can disable the `thinking_budget` to see how the model performs:
+
+prompt = """
+    A cantilever beam of length L=3m has a rectangular cross-section (width b=0.1m, height h=0.2m) and is made of steel (E=200 GPa).
+    It is subjected to a uniformly distributed load w=5 kN/m along its entire length and a point load P=10 kN at its free end.
+    Calculate the maximum bending stress (σ_max).
+"""
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=0
+        )
+    )
+)
+
+Markdown(response.text)
+
+You can see that the model used no tokens for the thinking step:
+
+print("Prompt tokens:",response.usage_metadata.prompt_token_count)
+print("Thoughts tokens:",response.usage_metadata.thoughts_token_count)
+print("Output tokens:",response.usage_metadata.candidates_token_count)
+print("Total tokens:",response.usage_metadata.total_token_count)
+
+Then you can set a fixed maximum budget (`thinking_budget=4096`, or 4096 tokens) for the thinking step to see how the model performs.
+
+You can see that, even producing a similar result for the same prompt, the amount of details shared in the answer makes it deeper and more consistent.
+
+**NOTE:** You have different possible budget values for 2.5 Pro and 2.5 Flash:
+- for the Gemini 2.5 Pro, the budgets can be between `128` and `32768`
+- for the Gemini 2.5 Flash, the budgets can be between `0` (disabling the thinking process) to `24576`
+
+prompt = """
+    A cantilever beam of length L=3m has a rectangular cross-section (width b=0.1m, height h=0.2m) and is made of steel (E=200 GPa).
+    It is subjected to a uniformly distributed load w=5 kN/m along its entire length and a point load P=10 kN at its free end.
+    Calculate the maximum bending stress (σ_max).
+"""
+
+thinking_budget = 4096 # @param {type:"slider", min:0, max:24576, step:1}
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=thinking_budget
+        )
+    )
+)
+
+Markdown(response.text)
+
+Now you can see that the model used around 2000 tokens for the thinking step (not necessarily using the full budget you set):
+
+print("Prompt tokens:",response.usage_metadata.prompt_token_count)
+print("Thoughts tokens:",response.usage_metadata.thoughts_token_count,"/",thinking_budget)
+print("Output tokens:",response.usage_metadata.candidates_token_count)
+print("Total tokens:",response.usage_metadata.total_token_count)
+
+Keep in mind that the largest the thinking budget is, the longest the model will spend time thinking, with means a longer computation time and a more expensive request.
+
+### Working with multimodal problems
+
+This geometry problem requires complex reasoning and is also using Gemini multimodal abilities to read the image.
+In this case, you are fixing a value to the `thinking_budget` so the model will use up to 8196 tokens for the thinking step.
+
+!wget https://storage.googleapis.com/generativeai-downloads/images/geometry.png -O geometry.png -q
+
+im = Image.open("geometry.png").resize((256,256))
+im
+
+prompt = "What's the area of the overlapping region?"
+
+thinking_budget = 8192 # @param {type:"slider", min:0, max:24576, step:1}
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=[im, prompt],
+    config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=thinking_budget
+        )
+    )
+)
+
+Markdown(response.text)
+
+### Solving brain teasers
+
+Here's another brain teaser based on an image, this time it looks like a mathematical problem, but it cannot actually be solved mathematically. If you check the toughts of the model you'll see that it will realize it and come up with an out-of-the-box solution.
+
+In this case, you are fixing a value to the `thinking_budget` so the model will use up to 24576 tokens for the thinking step.
+
+!wget https://storage.googleapis.com/generativeai-downloads/images/pool.png -O pool.png -q
+
+im = Image.open("pool.png").resize((256,256))
+im
+
+First you can check how the model performs without reasoning (`thinking_budget=0`):
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=[
+        im,
+        "How do I use those three pool balls to sum up to 30?"
+    ],
+    config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=0
+        )
+    )
+)
+
+Markdown(response.text)
+
+As you can notice, the model struggled to find a way to get to the result - and ended up suggesting to use different pool balls.
+
+Now you can use the model reasoning to solve the riddle:
+
+prompt = "How do I use those three pool balls to sum up to 30?"
+
+thinking_budget = 24576 # @param {type:"slider", min:0, max:24576, step:1}
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=[
+        im,
+        prompt,
+    ],
+    config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=thinking_budget
+        )
+    )
+)
+
+Markdown(response.text)
+
+### Solving a math puzzle with the maximum `thinking_budget`
+
+This is typically a case where you want to fix a budget, as the model can spend a lot of time thinking in all directions before finding the right answer. It should not be too low either as non-thinking models have trouble with such questions.
+
+Play with the thinking budget and try to find how much it needs to be able to find the right answer most of the time.
+
+prompt = """
+   How can you obtain 565 with 10 8 3 7 1 and 5 and the common operations?
+   You can only use a number once.
+"""
+
+thinking_budget = 24576 # @param {type:"slider", min:0, max:24576, step:1}
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=thinking_budget
+        )
+    )
+)
+
+display(Markdown(response.text))
+
+## Working thoughts summaries
+
+Summaries of the model's thinking reveal its internal problem-solving pathway. Users can leverage this feature to check the model's strategy and remain informed during complex tasks.
+
+For more details about Gemini 2.5 thinking capabilities, take a look at the [Gemini models thinking guide](https://googledevai.devsite.corp.google.com/gemini-api/docs/thinking#summaries).
+
+prompt = """
+  Alice, Bob, and Carol each live in a different house on the same street: red, green, and blue.
+  The person who lives in the red house owns a cat.
+  Bob does not live in the green house.
+  Carol owns a dog.
+  The green house is to the left of the red house.
+  Alice does not own a cat.
+  Who lives in each house, and what pet do they own?
+"""
+
+response = client.models.generate_content(
+  model=MODEL_ID,
+  contents=prompt,
+  config=types.GenerateContentConfig(
+    thinking_config=types.ThinkingConfig(
+      include_thoughts=True
+    )
+  )
+)
+
+You can check both the thought summaries and the final model response:
+
+for part in response.candidates[0].content.parts:
+  if not part.text:
+    continue
+  elif part.thought:
+    display(Markdown("## **Thoughts summary:**"))
+    display(Markdown(part.text))
+    print()
+  else:
+    display(Markdown("## **Answer:**"))
+    display(Markdown(part.text))
+
+You can also use see the thought summaries in streaming experiences:
+
+prompt = """
+  Alice, Bob, and Carol each live in a different house on the same street: red, green, and blue.
+  The person who lives in the red house owns a cat.
+  Bob does not live in the green house.
+  Carol owns a dog.
+  The green house is to the left of the red house.
+  Alice does not own a cat.
+  Who lives in each house, and what pet do they own?
+"""
+
+thoughts = ""
+answer = ""
+
+for chunk in client.models.generate_content_stream(
+    model=MODEL_ID,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+      thinking_config=types.ThinkingConfig(
+        include_thoughts=True
+      )
+    )
+):
+  for part in chunk.candidates[0].content.parts:
+    if not part.text:
+      continue
+    elif part.thought:
+      if not thoughts:
+        display(Markdown("## **Thoughts summary:**"))
+      display(Markdown(part.text.strip()))
+      thoughts += part.text
+    else:
+      if not answer:
+        display(Markdown("## **Answer:**"))
+      display(Markdown(part.text.strip()))
+      answer += part.text
+
+## Working with Gemini thinking models and tools
+
+Gemini thinking models are compatible with the tools and capabilities inherent to the Gemini ecosystem. This compatibility allows them to interface with external environments, execute computational code, or retrieve real-time data, subsequently incorporating such information into their analytical framework and concluding statements.
+
+### Solving a problem using the code execution tool
+
+This example shows how to use the [code execution](./Code_execution.ipynb) tool to solve a problem. The model will generate the code and then execute it to get the final answer.
+
+In this case, you are using the adaptive thinking_budget so the model will dynamically adjust the budget based on the complexity of the request.
+
+If you want to experiment with a fixed budget, you can set the `thinking_budget` to a specific value (e.g. `thinking_budget=4096`).
+
+prompt = """
+    What are the best ways to sort a list of n numbers from 0 to m?
+    Generate and run Python code for three different sort algorithms.
+    Provide the final comparison between algorithm clearly.
+    Is one of them linear?
+"""
+
+thinking_budget = 4096 # @param {type:"slider", min:0, max:24576, step:1}
+
+code_execution_tool = types.Tool(
+    code_execution=types.ToolCodeExecution()
+)
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        tools=[code_execution_tool],
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=thinking_budget,
+        )
+    ),
+)
+
+Checking the model response, including the code generated and the execution result:
+
+from IPython.display import HTML, Markdown
+
+for part in response.candidates[0].content.parts:
+  if part.text is not None:
+    display(Markdown(part.text))
+  if part.executable_code is not None:
+    code_html = f'<pre style="background-color: green;">{part.executable_code.code}</pre>' # Change code color
+    display(HTML(code_html))
+  if part.code_execution_result is not None:
+    display(Markdown(part.code_execution_result.output))
+display(Markdown("---"))
+
+### Thinking with search tool
+
+Search grounding is a great way to improve the quality of the model responses by giving it the ability to search for the latest information using Google Search. Check the [dedicated guide](./Search_Grounding.ipynb) for more details on that feature.
+
+In this case, you are using the adaptive thinking_budget so the model will dynamically adjust the budget based on the complexity of the request.
+
+If you want to experiment with a fixed budget, you can set the `thinking_budget` to a specific value (e.g. `thinking_budget=4096`).
+
+from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
+
+google_search_tool = Tool(google_search=GoogleSearch())
+
+prompt = """
+    What were the major scientific breakthroughs announced last month? Use your
+    critical thinking and only list what's really incredible and not just an
+    overinfluated title.
+"""
+
+thinking_budget = 4096 # @param {type:"slider", min:0, max:24576, step:1}
+
+response = client.models.generate_content(
+    model=MODEL_ID,
+    contents=prompt,
+    config=GenerateContentConfig(
+        tools=[google_search_tool],
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=thinking_budget,
+            include_thoughts=True
+        )
+    )
+)
+
+Then you can check all information:
+- the model thoughts summary
+- the model answer
+- and the Google Search reference
+
+for part in response.candidates[0].content.parts:
+  if not part.text:
+    continue
+  elif part.thought:
+    display(Markdown("## **Thoughts summary:**"))
+    display(Markdown(part.text))
+    print()
+  else:
+    display(Markdown("## **Answer:**"))
+    display(Markdown(part.text))
+
+display(Markdown("## **Google Search information:**"))
+display(HTML(response.candidates[0].grounding_metadata.search_entry_point.rendered_content))
+
+# Next Steps
+
+Try Gemini 2.5 Pro Experimental in
+[Google AI Studio](https://aistudio.google.com/prompts/new_chat?model=gemini-2.5-pro-exp-03-25), and learn more about [Prompting for thinking models](https://ai.google.dev/gemini-api/docs/prompting-with-thinking).
+
+For more examples of the Gemini capabilities, check the other [Cookbook examples](https://github.com/google-gemini/cookbook). You'll learn how to use the [Live API](./Get_started.ipynb), juggle with [multiple tools](../examples/LiveAPI_plotting_and_mapping.ipynb) or use Gemini [spatial understanding](./Spatial_understanding.ipynb) abilities.

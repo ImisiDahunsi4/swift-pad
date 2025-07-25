@@ -12,6 +12,8 @@
   "dependencies": {
     "@ai-sdk/assemblyai": "^0.0.1",
     "@ai-sdk/google": "^1.2.22",
+    "@aws-sdk/client-s3": "^3.850.0",
+    "@aws-sdk/s3-presigned-post": "^3.850.0",
     "@clerk/nextjs": "^6.23.2",
     "@google/genai": "^0.3.0",
     "@prisma/client": "^6.11.1",

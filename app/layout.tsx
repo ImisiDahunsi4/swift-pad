@@ -10,6 +10,7 @@ import { ApiKeyProvider } from "@/components/ApiKeyProvider";
 import { Footer } from "@/components/Footer";
 import PlausibleProvider from "next-plausible";
 import { SupabaseWrapper } from "@/components/SupabaseWrapper";
+import { SupabaseInitializer } from "@/components/SupabaseInitializer";
 
 const raleway = Raleway({
   variable: "--font-raleway",
@@ -43,6 +44,7 @@ export default function RootLayout({
               </head>
               <body className={`${raleway.variable} antialiased`}>
                 <div className="min-h-screen bg-white flex flex-col">
+                  <SupabaseInitializer />
                   <Header />
                   <SupabaseWrapper>
                     {children}

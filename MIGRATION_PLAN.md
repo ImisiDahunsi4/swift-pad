@@ -153,7 +153,7 @@ export const supabaseAdmin = createClient(
 
 #### 3.1 Install Gemini SDK
 ```bash
-pnpm add @google/generative-ai
+pnpm add @google/genai
 ```
 
 #### 3.2 Update Environment Variables
@@ -163,7 +163,7 @@ GEMINI_API_KEY=your_gemini_api_key
 
 #### 3.3 Create Gemini Client (`lib/geminiClient.ts`)
 ```typescript
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/genai';
 
 export function getGeminiClient(apiKey?: string) {
   return new GoogleGenerativeAI(

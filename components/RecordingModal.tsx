@@ -10,13 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { RecordingBasics } from "./RecordingBasics";
-import { useTRPC } from "@/trpc/client";
+import { trpc } from "@/trpc/client";
 import { RecordingMinutesLeft } from "./RecordingMinutesLeft";
-import { useTogetherApiKey } from "./TogetherApiKeyProvider";
+import { useApiKeys } from "./ApiKeyProvider";
 import useLocalStorage from "./hooks/useLocalStorage";
 import { AudioWaveform } from "./AudioWaveform";
 import { useAudioRecording } from "./hooks/useAudioRecording";
-import { useS3Upload } from "next-s3-upload";
+import useSupabaseUpload from "./hooks/useSupabaseUpload";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -38,7 +38,7 @@ declare global {
 export function RecordingModal({ onClose }: RecordingModalProps) {
   const [language, setLanguage] = useLocalStorage("language", "en");
 
-  const { uploadToS3 } = useS3Upload();
+  const { uploadToSupabase } = useSupabaseUpload();
 
   const {
     recording,
@@ -53,16 +53,15 @@ export function RecordingModal({ onClose }: RecordingModalProps) {
     resetRecording,
   } = useAudioRecording();
 
-  const trpc = useTRPC();
-  const { apiKey } = useTogetherApiKey();
-  const isBYOK = !!apiKey;
+  const { assemblyAiKey } = useApiKeys();
+  const isBYOK = !!assemblyAiKey;
 
   const { isLoading, minutesData } = useLimits();
 
   const router = useRouter();
-  const transcribeMutation = useMutation(
-    trpc.whisper.transcribeFromS3.mutationOptions()
-  );
+  const transcribeMutation = useMutation({
+    mutationFn: trpc.whisper.transcribeFromS3.mutate
+  });
 
   const queryClient = useQueryClient();
 
@@ -96,13 +95,13 @@ export function RecordingModal({ onClose }: RecordingModalProps) {
     }
     setIsProcessing("uploading");
     try {
-      // Upload to S3
+      // Upload to Supabase
       const file = new File([audioBlob], `recording-${Date.now()}.webm`, {
         type: "audio/webm",
       });
-      const { url } = await uploadToS3(file);
-      // Call tRPC mutation
+      const { url } = await uploadToSupabase(file);
 
+      // Call tRPC mutation
       setIsProcessing("transcribing");
 
       const { id } = await transcribeMutation.mutateAsync({
@@ -110,10 +109,12 @@ export function RecordingModal({ onClose }: RecordingModalProps) {
         language,
         durationSeconds: duration,
       });
+
       // Invalidate dashboard query
       await queryClient.invalidateQueries({
         queryKey: trpc.whisper.listWhispers.queryKey(),
       });
+
       // Redirect to whisper page
       router.push(`/whispers/${id}`);
     } catch (err) {

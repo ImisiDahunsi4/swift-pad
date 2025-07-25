@@ -1,0 +1,33 @@
+# Swift Pad Migration Guide
+
+## API Clients
+
+- [assemblyaiClient.ts](mdc:lib/assemblyaiClient.ts): AssemblyAI client utilities
+- [supabaseClient.ts](mdc:lib/supabaseClient.ts): Supabase client utilities
+- [geminiClient.ts](mdc:lib/geminiClient.ts): Google Gemini client utilities
+
+## Key Components
+
+- [ApiKeyProvider.tsx](mdc:components/ApiKeyProvider.tsx): Provider for managing API keys
+- [useSupabaseUpload.ts](mdc:components/hooks/useSupabaseUpload.ts): Custom hook for Supabase uploads
+
+## API Routes
+
+- [supabase-upload/route.ts](mdc:app/api/supabase-upload/route.ts): Supabase upload API route
+- [transform/route.ts](mdc:app/api/transform/route.ts): Text transformation using Gemini
+
+## TRPC Integration
+
+- [whisper.ts](mdc:trpc/routers/whisper.ts): Transcription logic using AssemblyAI
+- [init.ts](mdc:trpc/init.ts): TRPC initialization with API keys
+- [client.tsx](mdc:trpc/client.tsx): TRPC client with API key handling
+
+## Environment Variables
+
+Required environment variables:
+- `ASSEMBLYAI_API_KEY`: AssemblyAI API key
+- `GEMINI_API_KEY`: Google Gemini API key
+- `NEXT_PUBLIC_SUPABASE_URL`: Supabase URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anonymous key
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase service role key
+- `SUPABASE_STORAGE_BUCKET`: Supabase storage bucket name (default: "audio-recordings")

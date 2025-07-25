@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { PrismaClient } from "@/lib/generated/prisma";
 import { streamText } from "ai";
-import { togetherVercelAiClient } from "@/lib/apiClients";
 import { RECORDING_TYPES } from "@/lib/utils";
 import { getAuth } from "@clerk/nextjs/server";
+import { streamGeminiTextAiSdk } from "@/lib/geminiClient";
+import { getGeminiAiSdk } from "@/lib/geminiClient";
 
 export const maxDuration = 60;
 
@@ -18,8 +19,8 @@ export async function POST(req: NextRequest) {
       status: 401,
     });
   }
-  // Optionally get Together API key from header
-  const apiKey = req.headers.get("TogetherAPIToken") || undefined;
+  // Optionally get Gemini API key from header
+  const apiKey = req.headers.get("GeminiAPIToken") || undefined;
 
   // Find whisper
   const whisper = await prisma.whisper.findUnique({ where: { id: whisperId } });
@@ -44,9 +45,9 @@ export async function POST(req: NextRequest) {
     RECORDING_TYPES.find((t) => t.value === typeName)?.name || typeName;
 
   const prompt = `
-  You are a helpful assistant. You will be given a transcription of an audio recording and you will generate a ${typeFullName} based on the transcription with markdown formatting. 
+  You are a helpful assistant. You will be given a transcription of an audio recording and you will generate a ${typeFullName} based on the transcription with markdown formatting.
   Only output the generation itself, with no introductions, explanations, or extra commentary.
-  
+
   The transcription is: ${whisper.fullTranscription}
 
   ${(() => {
@@ -71,13 +72,6 @@ export async function POST(req: NextRequest) {
   Do not add phrases like "Based on the transcription" or "Let me know if you'd like me to help with anything else."
   `;
 
-  // Start streaming
-  const aiClient = togetherVercelAiClient(apiKey);
-  const { textStream } = streamText({
-    model: aiClient("meta-llama/Meta-Llama-3-70B-Instruct-Turbo"),
-    prompt,
-  });
-
   // Create a ReadableStream to send id first, then stream text
   let fullText = "";
   const encoder = new TextEncoder();
@@ -87,17 +81,46 @@ export async function POST(req: NextRequest) {
       controller.enqueue(
         encoder.encode(JSON.stringify({ id: transformation.id }) + "\n")
       );
-      // Stream the text
-      for await (const chunk of textStream) {
-        fullText += chunk;
-        controller.enqueue(encoder.encode(chunk));
+
+      // Stream the text using Gemini AI SDK
+      try {
+        // Get the AI SDK Google provider
+        const googleAi = getGeminiAiSdk(apiKey);
+
+        // Stream text using AI SDK
+        const { textStream } = await streamText({
+          model: googleAi('gemini-2.5-flash'),
+          prompt,
+          temperature: 0.7,
+          maxTokens: 2048,
+        });
+
+        // Process the stream
+        for await (const chunk of textStream) {
+          fullText += chunk;
+          controller.enqueue(encoder.encode(chunk));
+        }
+
+        // Update DB at the end
+        await prisma.transformation.update({
+          where: { id: transformation.id },
+          data: { text: fullText, isGenerating: false },
+        });
+        controller.close();
+      } catch (error) {
+        console.error("Gemini streaming error:", error);
+        controller.enqueue(encoder.encode("\n\nError generating transformation. Please try again."));
+
+        // Update DB with error state
+        await prisma.transformation.update({
+          where: { id: transformation.id },
+          data: {
+            text: fullText || "Error generating transformation",
+            isGenerating: false
+          },
+        });
+        controller.close();
       }
-      // Update DB at the end
-      await prisma.transformation.update({
-        where: { id: transformation.id },
-        data: { text: fullText, isGenerating: false },
-      });
-      controller.close();
     },
     cancel() {},
   });

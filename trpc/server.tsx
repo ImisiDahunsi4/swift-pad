@@ -1,37 +1,22 @@
-import "server-only";
-import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
-import { cache } from "react";
-import { createTRPCContext } from "./init";
-import { makeQueryClient } from "./query-client";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./routers/_app";
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { createContext } from "./init";
 
-// IMPORTANT: Create a stable getter for the query client that
-// will return the same client during the same request.
-export const getQueryClient = cache(makeQueryClient);
-
-export const trpc = createTRPCOptionsProxy({
-  ctx: createTRPCContext,
-  router: appRouter,
-  queryClient: getQueryClient,
-});
-
-export function HydrateClient(props: { children: React.ReactNode }) {
-  const queryClient = getQueryClient();
-  return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      {props.children}
-    </HydrationBoundary>
-  );
-}
-
-export function prefetch(queryOptions: any) {
-  const queryClient = getQueryClient();
-  if (queryOptions.queryKey[1]?.type === "infinite") {
-    void queryClient.prefetchInfiniteQuery(queryOptions as any);
-  } else {
-    void queryClient.prefetchQuery(queryOptions);
-  }
-}
-
-export const caller = appRouter.createCaller(createTRPCContext);
+// Create and export the tRPC handler
+export const trpcHandler = (req: Request) =>
+  fetchRequestHandler({
+    endpoint: "/api/trpc",
+    req,
+    router: appRouter,
+    createContext: async (opts) => {
+      return createContext(opts);
+    },
+    onError:
+      process.env.NODE_ENV === "development"
+        ? ({ path, error }) => {
+            console.error(
+              `❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`
+            );
+          }
+        : undefined,
+  });

@@ -1,6 +1,8 @@
 "use client";
 
 import { LandingPage } from "@/components/landing-page";
+import { checkEnvVars } from "@/lib/envCheck";
+import { useEffect } from "react";
 
 export interface Transcription {
   id: string;
@@ -12,5 +14,10 @@ export interface Transcription {
 }
 
 export default function Home() {
+  useEffect(() => {
+    // Check environment variables on client side
+    checkEnvVars();
+  }, []);
+
   return <LandingPage />;
 }

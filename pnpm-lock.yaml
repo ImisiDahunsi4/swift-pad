@@ -123,6 +123,12 @@ importers:
         specifier: ^3.25.74
         version: 3.25.74
     devDependencies:
+      '@stagewise-plugins/react':
+        specifier: ^0.6.2
+        version: 0.6.2(@stagewise/toolbar@0.6.2)
+      '@stagewise/toolbar-next':
+        specifier: ^0.6.2
+        version: 0.6.2(@types/react@19.1.8)(next@15.2.4(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.1.11
@@ -1154,6 +1160,27 @@ packages:
   '@smithy/util-waiter@4.0.6':
     resolution: {integrity: sha512-slcr1wdRbX7NFphXZOxtxRNA7hXAAtJAXJDE/wdoMAos27SIquVCKiSqfB6/28YzQ8FCsB5NKkhdM5gMADbqxg==}
     engines: {node: '>=18.0.0'}
+
+  '@stagewise-plugins/react@0.6.2':
+    resolution: {integrity: sha512-IZVWgxeO2GFQj8wTFacIkmlF7YlZn4T5MN3cyrYo5wdYo2RATGIX4+pugPmPYQUjq2Gm+OSLR2hxKfBq32Y2Qg==}
+    peerDependencies:
+      '@stagewise/toolbar': 0.6.2
+
+  '@stagewise/toolbar-next@0.6.2':
+    resolution: {integrity: sha512-0rLMYSQucYcgtD6UbX/4IY5CnYYImt279tAAw5h+BgEeLmZE3iB7z0M6mOrN4lvrt6+PrBYdAEvrAL5CKwXydw==}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      next: '>=14.0.0'
+      react: '>=18.0.0'
+
+  '@stagewise/toolbar-react@0.6.2':
+    resolution: {integrity: sha512-fKgINBKCgUWzeSdP8Nfs5cSchCS4yf9bMOROnVqAgMbT77yGhZ4nYWGNL/nkaCAkE7uyrpSvtbHT4ut2PDoJLw==}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      react: '>=18.0.0'
+
+  '@stagewise/toolbar@0.6.2':
+    resolution: {integrity: sha512-WN7PWaOT6YQKjJYL4/85V5UU0eZEws+/UBT/J4wJOEbFxoluLuchqh7xVTmUZTtw0q0xpzlgX8Vb0kAZf/pjmw==}
 
   '@supabase/auth-js@2.71.1':
     resolution: {integrity: sha512-mMIQHBRc+SKpZFRB2qtupuzulaUhFYupNyxqDj5Jp/LyPvcWvjaJzZzObv6URtL/O6lPxkanASnotGtNpS3H2Q==}
@@ -3595,6 +3622,25 @@ snapshots:
       '@smithy/abort-controller': 4.0.4
       '@smithy/types': 4.3.1
       tslib: 2.8.1
+
+  '@stagewise-plugins/react@0.6.2(@stagewise/toolbar@0.6.2)':
+    dependencies:
+      '@stagewise/toolbar': 0.6.2
+
+  '@stagewise/toolbar-next@0.6.2(@types/react@19.1.8)(next@15.2.4(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@stagewise/toolbar-react': 0.6.2(@types/react@19.1.8)(react@19.1.0)
+      '@types/react': 19.1.8
+      next: 15.2.4(@opentelemetry/api@1.9.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react: 19.1.0
+
+  '@stagewise/toolbar-react@0.6.2(@types/react@19.1.8)(react@19.1.0)':
+    dependencies:
+      '@stagewise/toolbar': 0.6.2
+      '@types/react': 19.1.8
+      react: 19.1.0
+
+  '@stagewise/toolbar@0.6.2': {}
 
   '@supabase/auth-js@2.71.1':
     dependencies:

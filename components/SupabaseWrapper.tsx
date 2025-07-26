@@ -12,8 +12,8 @@ export function SupabaseWrapper({ children }: SupabaseWrapperProps) {
 
   useEffect(() => {
     // Check if Supabase environment variables are available
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://plbihljyhvnacqoixhhh.supabase.co';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYmlobGp5aHZuYWNxb2l4aGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NTQ3NzEsImV4cCI6MjA2ODQzMDc3MX0.yI_u4SklTimjyDiq09VQo6khx8__WEDJzllKn6mNowY';
 
     if (!supabaseUrl || !supabaseAnonKey) {
       setError("Supabase environment variables are missing. Please check your .env file.");

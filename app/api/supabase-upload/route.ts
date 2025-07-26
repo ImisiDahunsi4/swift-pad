@@ -1,46 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin, getStorageBucket } from "@/lib/supabaseClient";
-import { getAuth } from "@clerk/nextjs/server";
-import { v4 as uuidv4 } from "uuid";
+import { NextResponse } from 'next/server';
+import { supabaseAdmin, getStorageBucket } from '@/lib/supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
-    // Auth check
-    const auth = getAuth(req);
-    if (!auth || !auth.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get file from request
-    const formData = await req.formData();
-    const file = formData.get("file") as File;
+    // Get form data from request
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'No file provided' },
+        { status: 400 }
+      );
     }
 
-    // Create a unique file path with user ID prefix for better organization
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${auth.userId}/${uuidv4()}.${fileExt}`;
+    // Create a unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExt}`;
     const bucketName = getStorageBucket();
 
-    // Convert File to ArrayBuffer for upload
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = new Uint8Array(arrayBuffer);
+    console.log(`Server-side upload: bucket=${bucketName}, file=${fileName}, type=${file.type}`);
 
-    // Upload to Supabase Storage
+    // Upload file to Supabase Storage using admin client (bypasses RLS)
     const { data, error } = await supabaseAdmin.storage
       .from(bucketName)
-      .upload(fileName, buffer, {
-        contentType: file.type,
-        cacheControl: "3600",
-        upsert: false,
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true,
       });
 
     if (error) {
-      console.error("Supabase upload error:", error);
+      console.error('Server upload error:', error);
       return NextResponse.json(
-        { error: "Failed to upload file" },
+        { success: false, message: error.message, error },
         { status: 500 }
       );
     }
@@ -51,13 +44,21 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(fileName);
 
     return NextResponse.json({
-      url: urlData.publicUrl,
-      path: fileName
+      success: true,
+      message: 'File uploaded successfully via server',
+      path: fileName,
+      url: urlData?.publicUrl,
+      data
     });
+
   } catch (error) {
-    console.error("Upload handler error:", error);
+    console.error('Error in supabase-upload API:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error in server upload',
+        error
+      },
       { status: 500 }
     );
   }

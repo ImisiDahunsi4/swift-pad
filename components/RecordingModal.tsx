@@ -19,7 +19,7 @@ import { useAudioRecording } from "./hooks/useAudioRecording";
 import useSupabaseUpload from "./hooks/useSupabaseUpload";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLimits } from "./hooks/useLimits";
 
 interface RecordingModalProps {
@@ -59,11 +59,14 @@ export function RecordingModal({ onClose }: RecordingModalProps) {
   const { isLoading, minutesData } = useLimits();
 
   const router = useRouter();
-  const transcribeMutation = useMutation({
-    mutationFn: trpc.whisper.transcribeFromS3.mutate
-  });
-
   const queryClient = useQueryClient();
+
+  // Use direct tRPC client instead of useMutation
+  const transcribeFromS3 = trpc.whisper.transcribeFromS3.useMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [['whisper', 'listWhispers']] });
+    },
+  });
 
   const [isProcessing, setIsProcessing] = useState<
     "idle" | "uploading" | "transcribing"
@@ -99,26 +102,31 @@ export function RecordingModal({ onClose }: RecordingModalProps) {
       const file = new File([audioBlob], `recording-${Date.now()}.webm`, {
         type: "audio/webm",
       });
+
+      // Log file details for debugging
+      console.log(`Uploading file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
+
       const { url } = await uploadToSupabase(file);
+      console.log("File uploaded successfully, URL:", url);
 
       // Call tRPC mutation
       setIsProcessing("transcribing");
 
-      const { id } = await transcribeMutation.mutateAsync({
+      const result = await transcribeFromS3.mutateAsync({
         audioUrl: url,
         language,
         durationSeconds: duration,
       });
 
-      // Invalidate dashboard query
-      await queryClient.invalidateQueries({
-        queryKey: trpc.whisper.listWhispers.queryKey(),
-      });
-
       // Redirect to whisper page
-      router.push(`/whispers/${id}`);
+      router.push(`/whispers/${result.id}`);
     } catch (err) {
-      toast.error("Failed to transcribe audio. Please try again.");
+      console.error("Recording save error:", err);
+      toast.error(
+        err instanceof Error
+          ? `Upload failed: ${err.message}`
+          : "Failed to transcribe audio. Please try again."
+      );
       setIsProcessing("idle");
     }
   };

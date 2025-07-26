@@ -209,7 +209,7 @@ export function Dashboard({ transcriptions }: DashboardProps) {
               className="w-full bg-[#101828] text-base text-left text-white rounded-lg h-[42px]"
             >
               <img src="/microphone.svg" className="w-5 h-5 size-5" />
-              New Whisper
+              New Note
               {/* <img src="/command.svg" className="w-[87px] h-[16px]" /> */}
             </Button>
           </div>

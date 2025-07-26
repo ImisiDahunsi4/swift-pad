@@ -16,6 +16,7 @@ import { ModalCustomApiKey } from "./hooks/ModalCustomApiKey";
 import { toast } from "sonner";
 import { useApiKeys } from "./ApiKeyProvider";
 import { useLimits } from "./hooks/useLimits";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
   const pathname = usePathname();
@@ -43,15 +44,15 @@ export function Header() {
   }
 
   return (
-    <header className="min-h-[63px] flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200">
+    <header className="min-h-[63px] flex items-center justify-between p-4 bg-background border-b border-border">
       {isSingleWhisperPage ? (
         <Link href="/whispers/" className="flex items-center gap-2">
           <img
             src="/back.svg"
             className="min-w-[14px] min-h-[14px] size-[14px]"
           />
-          <span className="text-base font-medium text-[#4A5565]">
-            My Whispers
+          <span className="text-base font-medium text-foreground">
+            My Notes
           </span>
         </Link>
       ) : (
@@ -59,15 +60,15 @@ export function Header() {
           href={user?.id ? "/whispers/" : "/"}
           className="flex items-center gap-2"
         >
-          <img src="/logo.svg" className="min-w-5 min-h-5 size-5" />
           <img
-            src="/logoGradient.svg"
-            alt="whisper"
-            className="w-[71px] min-h-[25px] h-[25px]"
+            src="/swift-pad.png"
+            alt="swift-pad"
+            className="w-[90px] h-auto"
           />
         </Link>
       )}
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <SignedOut>
           <SignInButton>
             <Button variant="ghost">Login</Button>
@@ -78,7 +79,7 @@ export function Header() {
         </SignedOut>
         <SignedIn>
           <Button
-            className="w-[51px] h-[30px] relative rounded-lg bg-white hover:bg-gray-50 border-[0.5px] border-gray-200"
+            className="w-[51px] h-[30px] relative rounded-lg bg-card hover:bg-muted border-[0.5px] border-border"
             onClick={() => {
               if (isBYOK) {
                 toast("You have unlimited transformations for your whispers!");
@@ -92,7 +93,7 @@ export function Header() {
             }}
           >
             <img src="/spark.svg" className="size-4 min-w-4" />
-            <p className="text-sm font-medium text-left text-[#1e2939]">
+            <p className="text-sm font-medium text-left text-card-foreground">
               {isBYOK
                 ? "∞"
                 : isLoading
@@ -132,7 +133,7 @@ function KeyButton() {
   return (
     <Button
       variant="ghost"
-      className="p-[7px] size-[30px] min-w-[30px] min-h-[30px] rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
+      className="p-[7px] size-[30px] min-w-[30px] min-h-[30px] rounded-lg border border-border bg-card hover:bg-muted"
       onClick={handleClick}
     >
       <img src="/key.svg" className="min-w-4 min-h-4 size-4" />

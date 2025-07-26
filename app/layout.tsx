@@ -5,7 +5,6 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/client";
-import { TogetherApiKeyProvider } from "@/components/TogetherApiKeyProvider";
 import { ApiKeyProvider } from "@/components/ApiKeyProvider";
 import { Footer } from "@/components/Footer";
 import PlausibleProvider from "next-plausible";
@@ -44,50 +43,48 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <ApiKeyProvider>
-        <TogetherApiKeyProvider>
-          <TRPCReactProvider>
-            <html lang="en">
-              <head>
-                <PlausibleProvider domain="usewhisper.io" />
-                {/* Script to apply dark mode on page load based on system preference or localStorage */}
-                <script
-                  dangerouslySetInnerHTML={{
-                    __html: `
-                      (function() {
-                        function getInitialTheme() {
-                          const savedTheme = localStorage.getItem('theme');
-                          if (savedTheme) {
-                            return savedTheme;
-                          }
-                          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        <TRPCReactProvider>
+          <html lang="en">
+            <head>
+              <PlausibleProvider domain="usewhisper.io" />
+              {/* Script to apply dark mode on page load based on system preference or localStorage */}
+              <script
+                dangerouslySetInnerHTML={{
+                  __html: `
+                    (function() {
+                      function getInitialTheme() {
+                        const savedTheme = localStorage.getItem('theme');
+                        if (savedTheme) {
+                          return savedTheme;
                         }
+                        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                      }
 
-                        const theme = getInitialTheme();
-                        if (theme === 'dark') {
-                          document.documentElement.classList.add('dark');
-                        } else {
-                          document.documentElement.classList.remove('dark');
-                        }
-                      })();
-                    `,
-                  }}
-                />
-              </head>
-              <body className={`${architectsDaughter.variable} ${firaCode.variable} antialiased`}>
-                <div className="min-h-screen flex flex-col">
-                  <SupabaseInitializer />
-                  <Header />
-                  <SupabaseWrapper>
-                    {children}
-                  </SupabaseWrapper>
-                  <Toaster richColors />
-                  <Footer />
-                  <StagewiseToolbar config={{ plugins: [ReactPlugin] }} />
-                </div>
-              </body>
-            </html>
-          </TRPCReactProvider>
-        </TogetherApiKeyProvider>
+                      const theme = getInitialTheme();
+                      if (theme === 'dark') {
+                        document.documentElement.classList.add('dark');
+                      } else {
+                        document.documentElement.classList.remove('dark');
+                      }
+                    })();
+                  `,
+                }}
+              />
+            </head>
+            <body className={`${architectsDaughter.variable} ${firaCode.variable} antialiased`}>
+              <div className="min-h-screen flex flex-col">
+                <SupabaseInitializer />
+                <Header />
+                <SupabaseWrapper>
+                  {children}
+                </SupabaseWrapper>
+                <Toaster richColors />
+                <Footer />
+                <StagewiseToolbar config={{ plugins: [ReactPlugin] }} />
+              </div>
+            </body>
+          </html>
+        </TRPCReactProvider>
       </ApiKeyProvider>
     </ClerkProvider>
   );

@@ -21,7 +21,7 @@ export const ModalCustomApiKey = () => {
   const isOpen = searchParams.get("customKey") === "true";
 
   const { assemblyAiKey, setAssemblyAiKey } = useApiKeys();
-  const [togetherApiKey, setTogetherApiKey] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isBYOK = !!assemblyAiKey;
@@ -32,7 +32,7 @@ export const ModalCustomApiKey = () => {
   );
 
   useEffect(() => {
-    setTogetherApiKey(assemblyAiKey || "");
+    setApiKey(assemblyAiKey || "");
   }, [assemblyAiKey]);
 
   // Remove customKey from the URL
@@ -67,7 +67,7 @@ export const ModalCustomApiKey = () => {
 
         if (errorMessage.startsWith("Invalid API key")) {
           setAssemblyAiKey("");
-          setTogetherApiKey("");
+          setApiKey("");
         }
         return false;
       }
@@ -78,7 +78,7 @@ export const ModalCustomApiKey = () => {
 
   const handleApiKeyChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setTogetherApiKey(value);
+    setApiKey(value);
 
     if (value.length === 0) {
       setAssemblyAiKey("");
@@ -108,7 +108,7 @@ export const ModalCustomApiKey = () => {
               className="w-5 h-5 rounded-[3px] mr-2"
             />
             <DialogTitle className="text-base font-semibold text-[#101828]">
-              Together AI API
+              AssemblyAI API
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -117,12 +117,12 @@ export const ModalCustomApiKey = () => {
             <p className="text-base font-medium text-[#101828] text-left">
               Add your{" "}
               <a
-                href="https://togetherai.link/"
+                href="https://www.assemblyai.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline"
               >
-                Together AI
+                AssemblyAI
               </a>{" "}
               API key:
             </p>
@@ -131,7 +131,7 @@ export const ModalCustomApiKey = () => {
                 type="password"
                 className="w-full h-9 flex items-center overflow-hidden rounded-lg bg-white border border-[#99a1af] px-3 text-base placeholder:text-[#99a1af] text-[#4a5565] pr-10"
                 placeholder="API Key"
-                value={togetherApiKey}
+                value={apiKey}
                 onChange={handleApiKeyChange}
                 autoComplete="off"
               />
@@ -149,12 +149,12 @@ export const ModalCustomApiKey = () => {
             <li className="text-sm text-[#4a5565] text-left">
               Visit{" "}
               <a
-                href="https://togetherai.link/"
+                href="https://www.assemblyai.com/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-[#101828] underline"
               >
-                together.ai
+                assemblyai.com
               </a>{" "}
               and sign up for free
             </li>
@@ -164,7 +164,7 @@ export const ModalCustomApiKey = () => {
           </ul>
           <div className="w-full flex flex-col gap-3 mt-4">
             <a
-              href="https://togetherai.link/"
+              href="https://www.assemblyai.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex justify-center items-center w-full h-10 gap-2 px-[33px] py-2.5 rounded-lg bg-[#101828] cursor-pointer"

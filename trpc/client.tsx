@@ -1,62 +1,72 @@
 "use client";
-import type { QueryClient } from "@tanstack/react-query";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import { createTRPCContext } from "@trpc/tanstack-react-query";
-import { useMemo } from "react";
-import { makeQueryClient } from "./query-client";
-import type { AppRouter } from "./routers/_app";
-import { useTogetherApiKey } from "../components/TogetherApiKeyProvider";
 
-export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
+import { createTRPCReact } from "@trpc/react-query";
+import { useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { httpBatchLink } from "@trpc/client";
+import { appRouter } from "./routers/_app";
+import { useApiKeys } from "@/components/ApiKeyProvider";
 
-let browserQueryClient: QueryClient;
-function getQueryClient() {
-  if (typeof window === "undefined") {
-    // Server: always make a new query client
-    return makeQueryClient();
-  }
-  // Browser: make a new query client if we don't already have one
-  if (!browserQueryClient) browserQueryClient = makeQueryClient();
-  return browserQueryClient;
-}
+export const trpc = createTRPCReact<typeof appRouter>({});
 
-function getUrl() {
-  const base = (() => {
-    if (typeof window !== "undefined") return "";
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-    return "http://localhost:3000";
-  })();
-  return `${base}/api/trpc`;
-}
+export function TRPCReactProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [queryClient] = useState(() => new QueryClient());
+  const [trpcClient] = useState(() => {
+    return trpc.createClient({
+      links: [
+        httpBatchLink({
+          url: "/api/trpc",
+          headers() {
+            return {
+              // Include custom headers for API keys here
+              // They will be added by the useTRPC hook below
+            };
+          },
+        }),
+      ],
+    });
+  });
 
-export function TRPCReactProvider(
-  props: Readonly<{
-    children: React.ReactNode;
-  }>
-) {
-  const queryClient = getQueryClient();
-  const { apiKey } = useTogetherApiKey();
-  const trpcClient = useMemo(
-    () =>
-      createTRPCClient<AppRouter>({
-        links: [
-          httpBatchLink({
-            // transformer: superjson, // Uncomment if you use superjson
-            url: getUrl(),
-            headers: () => {
-              return apiKey ? { TogetherAPIToken: apiKey } : {};
-            },
-          }),
-        ],
-      }),
-    [apiKey]
-  );
   return (
-    <QueryClientProvider client={queryClient}>
-      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-        {props.children}
-      </TRPCProvider>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </trpc.Provider>
   );
+}
+
+// Custom hook to use TRPC with API keys
+export function useTRPC() {
+  const { assemblyAiKey, geminiKey } = useApiKeys();
+
+  return {
+    ...trpc,
+    // Override mutation options to include API keys in headers
+    whisper: {
+      ...trpc.whisper,
+      transcribeFromS3: {
+        ...trpc.whisper.transcribeFromS3,
+        mutationOptions: () => ({
+          mutation: {
+            onMutate: async (variables) => {
+              const headers: HeadersInit = {};
+              if (assemblyAiKey) {
+                headers["AssemblyAIToken"] = assemblyAiKey;
+              }
+              if (geminiKey) {
+                headers["GeminiAPIToken"] = geminiKey;
+              }
+
+              return trpc.whisper.transcribeFromS3.mutate(variables, {
+                headers,
+              });
+            },
+          },
+        }),
+      },
+    },
+  };
 }

@@ -9,13 +9,13 @@ import {
 import Dropzone from "react-dropzone";
 import React, { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useS3Upload } from "next-s3-upload";
+import useSupabaseUpload from "./hooks/useSupabaseUpload";
 import { useRouter } from "next/navigation";
-import { useTRPC } from "@/trpc/client";
+import { trpc } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RecordingBasics } from "./RecordingBasics";
 import { RecordingMinutesLeft } from "./RecordingMinutesLeft";
-import { useTogetherApiKey } from "./TogetherApiKeyProvider";
+import { useApiKeys } from "./ApiKeyProvider";
 import useLocalStorage from "./hooks/useLocalStorage";
 import { useLimits } from "./hooks/useLimits";
 
@@ -39,14 +39,13 @@ export function UploadModal({ onClose }: { onClose: () => void }) {
   >("idle");
 
   const [isDragActive, setIsDragActive] = useState(false);
-  const { uploadToS3 } = useS3Upload();
+  const { uploadToSupabase } = useSupabaseUpload();
   const router = useRouter();
-  const trpc = useTRPC();
-  const { apiKey } = useTogetherApiKey();
-  const isBYOK = !!apiKey;
-  const transcribeMutation = useMutation(
-    trpc.whisper.transcribeFromS3.mutationOptions()
-  );
+  const { assemblyAiKey } = useApiKeys();
+  const isBYOK = !!assemblyAiKey;
+  const transcribeMutation = useMutation({
+    mutationFn: trpc.whisper.transcribeFromS3.mutate
+  });
   const queryClient = useQueryClient();
   const { minutesData, isLoading } = useLimits();
 
@@ -61,10 +60,10 @@ export function UploadModal({ onClose }: { onClose: () => void }) {
       }
       setIsProcessing("uploading");
       try {
-        // Run duration extraction and S3 upload in parallel
+        // Run duration extraction and Supabase upload in parallel
         const [duration, { url }] = await Promise.all([
           getDuration(file),
-          uploadToS3(file),
+          uploadToSupabase(file),
         ]);
         // Call tRPC mutation
         setIsProcessing("transcribing");
@@ -80,9 +79,10 @@ export function UploadModal({ onClose }: { onClose: () => void }) {
         router.push(`/whispers/${id}`);
       } catch (err) {
         toast.error("Failed to transcribe audio. Please try again.");
+        setIsProcessing("idle");
       }
     },
-    [uploadToS3, transcribeMutation, router]
+    [uploadToSupabase, transcribeMutation, router, language]
   );
 
   return (
@@ -104,83 +104,71 @@ export function UploadModal({ onClose }: { onClose: () => void }) {
             />
             <p className="text-gray-500">
               {isProcessing === "uploading"
-                ? "Uploading audio recording"
+                ? "Uploading audio file"
                 : "Transcribing audio..."}
               <span className="animate-pulse">...</span>
             </p>
           </div>
         ) : (
           <>
-            <RecordingBasics
-              language={language}
-              setLanguage={setLanguage}
-              disabled={isProcessing !== "idle"}
-            />
-            <Dropzone
-              multiple={false}
-              accept={{
-                // MP3 audio
-                "audio/mpeg3": [".mp3"],
-                "audio/x-mpeg-3": [".mp3"],
-                // WAV audio
-                "audio/wav": [".wav"],
-                "audio/x-wav": [".wav"],
-                "audio/wave": [".wav"],
-                "audio/x-pn-wav": [".wav"],
-                // iPhone voice notes (M4A)
-                "audio/mp4": [".m4a"],
-                "audio/m4a": [".m4a"],
-                "audio/x-m4a": [".m4a"],
-              }}
-              onDrop={handleDrop}
-              onDragEnter={() => setIsDragActive(true)}
-              onDragLeave={() => setIsDragActive(false)}
-              onDropAccepted={() => setIsDragActive(false)}
-              onDropRejected={() => setIsDragActive(false)}
-            >
-              {({ getRootProps, getInputProps }) => (
-                <div
-                  {...getRootProps()}
-                  className="flex flex-col justify-start items-start relative overflow-hidden bg-white cursor-pointer"
-                >
-                  <input {...getInputProps()} />
-                  <div className="relative bg-white p-5 w-full">
-                    <div className="relative overflow-hidden rounded-xl bg-gray-100 border-2 border-[#d1d5dc] border-dashed min-h-[86px] flex justify-center items-center flex-col gap-1">
-                      <div className="flex justify-center items-center relative gap-2.5 px-3 py-2 rounded-lg bg-[#101828]">
-                        <img
-                          src="/uploadWhite.svg"
-                          className="size-[18px] min-w-[18px]"
-                        />
-                        <p className="text-base font-semibold text-left text-white">
-                          Upload a Recording
-                        </p>
-                      </div>
-                      <p className="text-xs text-center text-[#4a5565]">
-                        Or drag‑and‑drop here
+            <div className="flex flex-col items-center w-full bg-white">
+              <RecordingBasics
+                language={language}
+                setLanguage={setLanguage}
+              />
+            </div>
+
+            <div className="p-4 pt-0">
+              <Dropzone
+                onDrop={handleDrop}
+                onDragEnter={() => setIsDragActive(true)}
+                onDragLeave={() => setIsDragActive(false)}
+                accept={{
+                  "audio/*": [
+                    ".mp3",
+                    ".wav",
+                    ".m4a",
+                    ".webm",
+                    ".mp4",
+                    ".aac",
+                    ".flac",
+                  ],
+                }}
+              >
+                {({ getRootProps, getInputProps }) => (
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                      isDragActive
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <img
+                        src="/upload.svg"
+                        alt="Upload"
+                        className="w-8 h-8 mb-2"
+                      />
+                      <p className="text-sm text-gray-600">
+                        Drag and drop an audio file here, or click to select
                       </p>
-                      {isDragActive && (
-                        <div className="absolute inset-0 bg-blue-100 bg-opacity-50 flex items-center justify-center z-10 pointer-events-none">
-                          <span className="text-blue-700 font-semibold">
-                            Drop audio file here
-                          </span>
-                        </div>
-                      )}
+                      <p className="text-xs text-gray-500">
+                        Supports MP3, WAV, M4A, and more
+                      </p>
                     </div>
                   </div>
-                  <div className="relative overflow-hidden px-5 py-3 w-full border-t border-gray-200">
-                    {isLoading ? (
-                      <span className="text-sm text-[#4a5565]">Loading...</span>
-                    ) : (
-                      <RecordingMinutesLeft
-                        minutesLeft={
-                          isBYOK ? Infinity : minutesData?.remaining ?? 0
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-            </Dropzone>
+                )}
+              </Dropzone>
+
+              <RecordingMinutesLeft
+                className="mt-4"
+                isBYOK={isBYOK}
+                isLoading={isLoading}
+                minutesData={minutesData}
+              />
+            </div>
           </>
         )}
       </DialogContent>

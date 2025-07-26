@@ -16,7 +16,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { useTRPC } from "@/trpc/client";
+import { trpc } from "@/trpc/client";
 import { useMutation } from "@tanstack/react-query";
 
 interface DashboardProps {
@@ -29,10 +29,10 @@ export function Dashboard({ transcriptions }: DashboardProps) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [localTranscriptions, setLocalTranscriptions] =
     useState(transcriptions);
-  const trpc = useTRPC();
-  const deleteMutation = useMutation(
-    trpc.whisper.deleteWhisper.mutationOptions()
-  );
+
+  const deleteMutation = useMutation({
+    mutationFn: trpc.whisper.deleteWhisper.mutate
+  });
 
   // Desktop detection (simple window width check)
   const [isDesktop, setIsDesktop] = useState(false);

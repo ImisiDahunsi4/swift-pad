@@ -1,6 +1,6 @@
 import { appRouter } from "@/trpc/routers/_app";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { createTRPCContext } from "@/trpc/init";
+import { createContext } from "@/trpc/init";
 import type { NextRequest } from "next/server";
 
 const handler = (req: NextRequest) => {
@@ -8,7 +8,7 @@ const handler = (req: NextRequest) => {
     endpoint: "/api/trpc",
     req,
     router: appRouter,
-    createContext: () => createTRPCContext({ req }),
+    createContext: () => createContext({ req }),
   });
 };
 

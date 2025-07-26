@@ -8,10 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useState, useRef, useEffect } from "react";
-import { useTogetherApiKey } from "../TogetherApiKeyProvider";
+import { useApiKeys } from "../ApiKeyProvider";
 import { toast } from "sonner";
-import { useTRPC } from "@/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { trpc } from "@/trpc/client";
 import { RecordingMinutesLeft } from "../RecordingMinutesLeft";
 
 export const ModalCustomApiKey = () => {
@@ -21,20 +20,20 @@ export const ModalCustomApiKey = () => {
 
   const isOpen = searchParams.get("customKey") === "true";
 
-  const { apiKey, setApiKey } = useTogetherApiKey();
+  const { assemblyAiKey, setAssemblyAiKey } = useApiKeys();
   const [togetherApiKey, setTogetherApiKey] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const trpc = useTRPC();
-  const isBYOK = !!apiKey;
+  const isBYOK = !!assemblyAiKey;
 
-  const { data: minutesData, isLoading: isMinutesLoading } = useQuery(
-    trpc.limit.getMinutesLeft.queryOptions()
+  const minutesQuery = trpc.limit.getMinutesLeft.useQuery(
+    undefined,
+    { enabled: !isBYOK } // Don't fetch if BYOK (unlimited)
   );
 
   useEffect(() => {
-    setTogetherApiKey(apiKey || "");
-  }, [apiKey]);
+    setTogetherApiKey(assemblyAiKey || "");
+  }, [assemblyAiKey]);
 
   // Remove customKey from the URL
   const handleClose = useCallback(() => {
@@ -56,7 +55,7 @@ export const ModalCustomApiKey = () => {
       });
 
       if (response.ok) {
-        setApiKey(apiKey);
+        setAssemblyAiKey(apiKey);
         toast.success("API key validated and saved!");
         return true;
       } else {
@@ -67,7 +66,7 @@ export const ModalCustomApiKey = () => {
         toast.error(errorMessage);
 
         if (errorMessage.startsWith("Invalid API key")) {
-          setApiKey("");
+          setAssemblyAiKey("");
           setTogetherApiKey("");
         }
         return false;
@@ -82,7 +81,7 @@ export const ModalCustomApiKey = () => {
     setTogetherApiKey(value);
 
     if (value.length === 0) {
-      setApiKey("");
+      setAssemblyAiKey("");
       return;
     }
 
@@ -200,11 +199,11 @@ export const ModalCustomApiKey = () => {
           </div>
         </div>
         <div className="w-full flex justify-start px-5 py-3 mt-auto border-t border-gray-200">
-          {isMinutesLoading ? (
+          {minutesQuery.isLoading ? (
             <span className="text-sm text-[#4a5565]">Loading...</span>
           ) : (
             <RecordingMinutesLeft
-              minutesLeft={isBYOK ? Infinity : minutesData?.remaining ?? 0}
+              minutesLeft={isBYOK ? Infinity : minutesQuery.data?.remaining ?? 0}
             />
           )}
         </div>

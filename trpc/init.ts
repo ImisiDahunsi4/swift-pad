@@ -1,33 +1,41 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { inferAsyncReturnType } from "@trpc/server";
-import { type NextRequest } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getAuth } from "@clerk/nextjs/server";
+import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 
-// You can extend this context as needed
-export async function createTRPCContext(opts?: { req?: NextRequest }) {
-  // Get Clerk auth object
-  const clerkAuth = await auth();
-  let togetherApiKey: string | undefined = undefined;
-  if (opts?.req) {
-    togetherApiKey = opts.req.headers.get("TogetherAPIToken") || undefined;
-  }
-  return { auth: clerkAuth, togetherApiKey };
+export interface AuthContext {
+  auth: {
+    userId: string;
+  };
+  assemblyAiKey?: string;
+  geminiKey?: string;
 }
 
-export const t = initTRPC.context<typeof createTRPCContext>().create();
-
-export type TRPCContext = inferAsyncReturnType<typeof createTRPCContext>;
-
-// Middleware to ensure user is authenticated
-const isAuthed = t.middleware(({ next, ctx }) => {
-  if (!ctx.auth?.userId) {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+export async function createContext({
+  req,
+}: FetchCreateContextFnOptions): Promise<AuthContext> {
+  const auth = getAuth(req);
+  if (!auth.userId) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "User is not authenticated",
+    });
   }
-  return next({
-    ctx: {
-      auth: ctx.auth,
-    },
-  });
-});
 
-export const protectedProcedure = t.procedure.use(isAuthed);
+  // Extract API keys from headers if present
+  const assemblyAiKey = req.headers.get("AssemblyAIToken") || undefined;
+  const geminiKey = req.headers.get("GeminiAPIToken") || undefined;
+
+  return {
+    auth: {
+      userId: auth.userId,
+    },
+    assemblyAiKey,
+    geminiKey,
+  };
+}
+
+export const t = initTRPC.context<typeof createContext>().create();
+
+export const router = t.router;
+export const publicProcedure = t.procedure;
+export const protectedProcedure = t.procedure;

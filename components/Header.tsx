@@ -14,16 +14,16 @@ import {
 import Link from "next/link";
 import { ModalCustomApiKey } from "./hooks/ModalCustomApiKey";
 import { toast } from "sonner";
-import { useTogetherApiKey } from "./TogetherApiKeyProvider";
+import { useApiKeys } from "./ApiKeyProvider";
 import { useLimits } from "./hooks/useLimits";
 
 export function Header() {
   const pathname = usePathname();
   const { user } = useUser();
   const [mounted, setMounted] = React.useState(false);
-  const { apiKey } = useTogetherApiKey();
+  const { assemblyAiKey } = useApiKeys();
 
-  const isBYOK = !!apiKey;
+  const isBYOK = !!assemblyAiKey;
 
   const { transformationsData, isLoading } = useLimits();
 

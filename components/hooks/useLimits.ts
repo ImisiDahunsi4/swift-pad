@@ -1,28 +1,26 @@
-import { useTRPC } from "@/trpc/client";
+import { trpc } from "@/trpc/client";
 import { useUser } from "@clerk/nextjs";
-import { useQuery } from "@tanstack/react-query";
-import { useTogetherApiKey } from "../TogetherApiKeyProvider";
+import { useApiKeys } from "../ApiKeyProvider";
 
 export const useLimits = () => {
   const { user } = useUser();
-  const { apiKey } = useTogetherApiKey();
+  const { assemblyAiKey } = useApiKeys();
 
-  const isBYOK = !!apiKey;
+  const isBYOK = !!assemblyAiKey;
 
-  const trpc = useTRPC();
-  const { data: transformationsData, isLoading: isTransformationsLoading } =
-    useQuery({
-      ...trpc.limit.getTransformationsLeft.queryOptions(),
-      enabled: !!user && !isBYOK, // Don't fetch if BYOK (unlimited)
-    });
+  const transformationsQuery = trpc.limit.getTransformationsLeft.useQuery(
+    undefined,
+    { enabled: !!user && !isBYOK } // Don't fetch if BYOK (unlimited)
+  );
 
-  const { data: minutesData, isLoading: isMinutesLoading } = useQuery(
-    trpc.limit.getMinutesLeft.queryOptions()
+  const minutesQuery = trpc.limit.getMinutesLeft.useQuery(
+    undefined,
+    { enabled: !!user && !isBYOK } // Don't fetch if BYOK (unlimited)
   );
 
   return {
-    transformationsData,
-    isLoading: isTransformationsLoading || isMinutesLoading,
-    minutesData,
+    transformationsData: transformationsQuery.data,
+    isLoading: transformationsQuery.isLoading || minutesQuery.isLoading,
+    minutesData: minutesQuery.data,
   };
 };

@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Dashboard } from "@/components/dashboard";
 import { useUser } from "@clerk/nextjs";
-import { useTRPC } from "@/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { trpc } from "@/trpc/client";
 import { useEffect } from "react";
 
 export interface Transcription {
@@ -38,7 +37,6 @@ function Spinner() {
 export default function WhispersPage() {
   const router = useRouter();
   const { user } = useUser();
-  const trpc = useTRPC();
 
   useEffect(() => {
     if (user === null) {
@@ -46,10 +44,9 @@ export default function WhispersPage() {
     }
   }, [user, router]);
 
-  const { data: transcriptions = [], isLoading } = useQuery(
-    trpc.whisper.listWhispers.queryOptions(undefined, {
-      enabled: !!user?.id,
-    })
+  const { data: transcriptions = [], isLoading } = trpc.whisper.listWhispers.useQuery(
+    undefined,
+    { enabled: !!user?.id }
   );
 
   if (isLoading) {

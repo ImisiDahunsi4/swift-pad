@@ -6,8 +6,10 @@ import { Header } from "@/components/Header";
 import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/client";
 import { TogetherApiKeyProvider } from "@/components/TogetherApiKeyProvider";
+import { ApiKeyProvider } from "@/components/ApiKeyProvider";
 import { Footer } from "@/components/Footer";
 import PlausibleProvider from "next-plausible";
+import { SupabaseWrapper } from "@/components/SupabaseWrapper";
 
 const raleway = Raleway({
   variable: "--font-raleway",
@@ -32,23 +34,27 @@ export default function RootLayout({
   // Place a ClientHeader component below
   return (
     <ClerkProvider>
-      <TogetherApiKeyProvider>
-        <TRPCReactProvider>
-          <html lang="en">
-            <head>
-              <PlausibleProvider domain="usewhisper.io" />
-            </head>
-            <body className={`${raleway.variable} antialiased`}>
-              <div className="min-h-screen bg-white flex flex-col">
-                <Header />
-                {children}
-                <Toaster richColors />
-                <Footer />
-              </div>
-            </body>
-          </html>
-        </TRPCReactProvider>
-      </TogetherApiKeyProvider>
+      <ApiKeyProvider>
+        <TogetherApiKeyProvider>
+          <TRPCReactProvider>
+            <html lang="en">
+              <head>
+                <PlausibleProvider domain="usewhisper.io" />
+              </head>
+              <body className={`${raleway.variable} antialiased`}>
+                <div className="min-h-screen bg-white flex flex-col">
+                  <Header />
+                  <SupabaseWrapper>
+                    {children}
+                  </SupabaseWrapper>
+                  <Toaster richColors />
+                  <Footer />
+                </div>
+              </body>
+            </html>
+          </TRPCReactProvider>
+        </TogetherApiKeyProvider>
+      </ApiKeyProvider>
     </ClerkProvider>
   );
 }

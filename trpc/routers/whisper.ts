@@ -1,16 +1,39 @@
 import { t } from "../init";
 import { z } from "zod";
-import { PrismaClient } from "../../lib/";
+import { PrismaClient } from "@/lib/generated/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { protectedProcedure } from "../init";
 import { limitMinutes } from "@/lib/limits";
-import {
-  togetherBaseClientWithKey,
-  togetherVercelAiClient,
-} from "@/lib/apiClients";
+import { getAssemblyAIClient } from "@/lib/assemblyaiClient";
+import { generateGeminiTextAiSdk, getGeminiAiSdk } from "@/lib/geminiClient";
 import { generateText } from "ai";
 
 const prisma = new PrismaClient();
+
+// Helper function to poll AssemblyAI for transcription completion
+async function pollForTranscriptionCompletion(transcriptId: string, apiKey?: string) {
+  const client = getAssemblyAIClient(apiKey);
+
+  // Maximum number of polling attempts (10 minutes total with 3s intervals)
+  const maxAttempts = 200;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    const transcript = await client.transcripts.get(transcriptId);
+
+    if (transcript.status === 'completed') {
+      return transcript;
+    } else if (transcript.status === 'error') {
+      throw new Error(`Transcription failed: ${transcript.error}`);
+    }
+
+    // Wait for 3 seconds before polling again
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    attempts++;
+  }
+
+  throw new Error('Transcription timed out after 10 minutes');
+}
 
 export const whisperRouter = t.router({
   listWhispers: protectedProcedure.query(async ({ ctx }) => {
@@ -48,7 +71,7 @@ export const whisperRouter = t.router({
 
       const limitResult = await limitMinutes({
         clerkUserId: ctx.auth.userId,
-        isBringingKey: !!ctx.togetherApiKey,
+        isBringingKey: !!ctx.assemblyAiKey,
         minutes,
       });
 
@@ -56,29 +79,39 @@ export const whisperRouter = t.router({
         throw new Error("You have exceeded your daily audio minutes limit.");
       }
 
-      const res = await togetherBaseClientWithKey(
-        ctx.togetherApiKey
-      ).audio.transcriptions.create({
-        // @ts-ignore: Together API accepts file URL as string, even if types do not allow
-        file: input.audioUrl,
-        model: "openai/whisper-large-v3",
-        language: input.language || "en",
-      });
+      // Initialize AssemblyAI client
+      const client = getAssemblyAIClient(ctx.assemblyAiKey);
 
-      const transcription = res.text as string;
+      // Submit transcription request to AssemblyAI
+      const transcriptParams = {
+        audio_url: input.audioUrl,
+        language_code: input.language || "en",
+        speaker_labels: true, // Enable speaker diarization
+        auto_highlights: true, // Enable key moments detection
+      };
 
-      // Generate a title from the transcription (first 8 words or fallback)
-      const { text: title } = await generateText({
+      const transcript = await client.transcripts.create(transcriptParams);
+
+      // Poll for completion
+      const completedTranscript = await pollForTranscriptionCompletion(
+        transcript.id,
+        ctx.assemblyAiKey
+      );
+
+      const transcription = completedTranscript.text;
+
+      // Generate a title from the transcription using Gemini with AI SDK
+      const googleAi = getGeminiAiSdk(ctx.geminiKey);
+      const title = await generateText({
+        model: googleAi('gemini-2.5-flash'),
         prompt: `Generate a title for the following transcription with max of 10 words/80 characters:
         ${transcription}
 
         Only return the title, nothing else, no explanation and no quotes or followup.
         `,
-        model: togetherVercelAiClient(ctx.togetherApiKey)(
-          "meta-llama/Llama-3.3-70B-Instruct-Turbo"
-        ),
-        maxTokens: 10,
-      });
+        temperature: 0.7,
+        maxTokens: 30,
+      }).then(result => result.text);
 
       const whisperId = input.whisperId || uuidv4();
 

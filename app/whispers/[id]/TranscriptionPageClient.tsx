@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTRPC } from "@/trpc/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { trpc } from "@/trpc/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatWhisperTimestamp, RECORDING_TYPES } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
@@ -17,14 +17,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LoadingSection } from "@/components/whisper-page/LoadingSection";
 import { CustomMarkdown } from "@/components/CustomMarkdown";
-import { useTogetherApiKey } from "@/components/TogetherApiKeyProvider";
+import { useApiKeys } from "@/components/ApiKeyProvider";
 import { useLimits } from "@/components/hooks/useLimits";
 
 const DELAY_SAVE = 10000; // 10 seconds
 
 export default function TranscriptionPageClient({ id }: { id: string }) {
   const router = useRouter();
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [selectedTransformationId, setSelectedTransformationId] = useState<
     string | null
@@ -35,18 +34,20 @@ export default function TranscriptionPageClient({ id }: { id: string }) {
     isLoading,
     error,
     refetch,
-  } = useQuery(trpc.whisper.getWhisperWithTracks.queryOptions({ id }));
+  } = trpc.whisper.getWhisperWithTracks.useQuery({ id });
 
   const [editableTranscription, setEditableTranscription] = useState("");
   const [editableTitle, setEditableTitle] = useState("");
 
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const titleDebounceTimeout = useRef<NodeJS.Timeout | null>(null);
-  const trpcMutation = useMutation(
-    trpc.whisper.updateFullTranscription.mutationOptions()
-  );
-  const titleMutation = useMutation(trpc.whisper.updateTitle.mutationOptions());
-  const { apiKey } = useTogetherApiKey();
+  const trpcMutation = useMutation({
+    mutationFn: trpc.whisper.updateFullTranscription.mutate
+  });
+  const titleMutation = useMutation({
+    mutationFn: trpc.whisper.updateTitle.mutate
+  });
+  const { assemblyAiKey } = useApiKeys();
   const [streamingText, setStreamingText] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const { transformationsData, isLoading: isLimitsLoading } = useLimits();
@@ -122,7 +123,7 @@ export default function TranscriptionPageClient({ id }: { id: string }) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(apiKey ? { TogetherAPIToken: apiKey } : {}),
+          ...(assemblyAiKey ? { TogetherAPIToken: assemblyAiKey } : {}),
         },
         body: JSON.stringify({ whisperId: id, typeName }),
       });

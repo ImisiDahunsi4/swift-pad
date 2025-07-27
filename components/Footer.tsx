@@ -24,7 +24,7 @@ export const Footer = () => {
 
       <div className="flex flex-row gap-2">
         <a
-          href="https://github.com/nutlope/whisper-app"
+          href="https://github.com/ImisiDahunsi4/swift-pad"
           target="_blank"
           rel="noopenner"
           className="text-foreground hover:text-primary"
@@ -32,7 +32,7 @@ export const Footer = () => {
           <img src="/github.svg" alt="GitHub" className="h-5 w-5" />
         </a>
         <a
-          href="https://x.com/nutlope"
+          href="https://x.com/Zynth0x"
           target="_blank"
           rel="noopenner"
           className="text-foreground hover:text-primary"

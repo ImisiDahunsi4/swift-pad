@@ -51,3 +51,8 @@ next-env.d.ts
 
 /lib/generated/prisma
 .example.env
+ASSEMBLYAI_INTEGRATION.md
+
+.gitignore
+INTEGRATIONS.md
+TECHNICAL_IMPLEMENTATION.md

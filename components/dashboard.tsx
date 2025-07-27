@@ -61,7 +61,7 @@ export function Dashboard({ transcriptions }: DashboardProps) {
       // Rollback if error
       setLocalTranscriptions(transcriptions);
       alert(
-        "Failed to delete. You may not own this Whisper or there was a network error."
+        "Failed to delete. You may not own this Noteor there was a network error."
       );
     }
   };
@@ -97,7 +97,7 @@ export function Dashboard({ transcriptions }: DashboardProps) {
         <div className="mb-8">
           <div className="mx-auto max-w-[729px] w-full md:rounded-xl bg-white border-b-[0.7px] md:border-[0.7px] border-gray-200 md:border-[#d1d5dc] px-6 py-5 flex flex-col gap-3 md:my-4 ">
             <h1 className="text-xl font-semibold text-left text-[#101828]">
-              Your Whispers
+              Your Notes
             </h1>
 
             <div className="relative">
@@ -115,10 +115,10 @@ export function Dashboard({ transcriptions }: DashboardProps) {
           {filteredTranscriptions.length === 0 && searchQuery === "" ? (
             <div className="text-center py-16 flex flex-col items-center">
               <h2 className="text-xl font-medium text-left text-black mb-2">
-                Welcome, whisperer!
+                Welcome!
               </h2>
               <p className="max-w-[264px] text-base text-center text-[#364153] mb-8">
-                Start by creating a new Whisper, or
+                Start by creating a new Note, or
                 <br />
                 upload a voice note for
                 <br />
